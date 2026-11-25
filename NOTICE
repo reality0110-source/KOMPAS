@@ -1,0 +1,21 @@
+KOMPAS — Korea Offshore Metocean Preliminary Assessment System
+Copyright 2026 The AuthorS
+
+Licensed under the Apache License, Version 2.0 (see LICENSE).
+Official source and releases: https://github.com/reality0110-source/KOMPAS
+
+The Apache License does not grant permission to use the name "KOMPAS" (Section 6).
+Please distribute modified versions under a different name, and mark the files you
+changed as modified (Section 4(b)).
+
+Apache 라이선스는 "KOMPAS"라는 이름을 쓸 권리를 주지 않습니다(제6조).
+고친 판은 다른 이름으로 배포하고, 고친 파일에는 고쳤다는 표시를 남겨 주세요(제4조 (b)).
+
+Data included in this product / 포함된 자료:
+- 해양수산부 국립해양조사원, 조류예보 최강창낙조 및 전류 (공공데이터포털 API, 공공누리 제1유형 출처표시)
+- 해양수산부 (2019), 빈도별 심해설계파 · 해상풍 제원 (전국 520개 격자점)
+- 항만 및 어항 설계기준 KDS 64 10 10: 2024, 해설 표 4.4-2 · 4.4-3 · 4.4-6 · 4.4-7 · 4.4-8
+
+Map tiles / 지도: © OpenStreetMap contributors (https://www.openstreetmap.org/copyright)
+
+Third-party software / 다른 사람이 만든 부품: see THIRD_PARTY_NOTICES.md and the licenses folder.

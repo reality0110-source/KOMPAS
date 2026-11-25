@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>KOMPAS 지도</title>
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+<style>
+  :root { --bg:#0a0e1a; --surf:#111827; --border:#1e2d47; --text:#f1f5f9; --label:#94a3b8; --accent:#00c9a7; --danger:#f87171; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  html, body { height:100%; background:var(--bg); color:var(--text);
+               font-family:"Noto Sans KR","Malgun Gothic",sans-serif; font-size:13px; }
+  body { display:flex; flex-direction:column; }
+  header { background:var(--surf); padding:10px 16px; border-bottom:1px solid var(--border); }
+  header h1 { font-size:16px; color:var(--accent); }
+  #map { flex:1; background:#aad3df; }
+  footer { background:var(--surf); border-top:1px solid var(--border); padding:8px 16px;
+           display:flex; gap:24px; align-items:center; flex-wrap:wrap; }
+  footer .k { color:var(--label); margin-right:6px; }
+  footer .v { font-weight:bold; }
+  #msg { margin-left:auto; color:var(--accent); }
+  #msg.err { color:var(--danger); }
+  body.embed header { display:none; }
+  .leaflet-container { font-family:inherit; }
+</style>
+</head>
+<body>
+<header><h1>KOMPAS 지도 — 클릭하면 설치위치로 반영됩니다</h1></header>
+<div id="map"></div>
+<footer>
+  <span><span class="k">설치위치</span><span class="v" id="dd">-</span></span>
+  <span><span class="k">도분초</span><span class="v" id="dms">-</span></span>
+  <span id="msg">지도 불러오는 중...</span>
+</footer>
+<script src="vendor/leaflet/leaflet.js"></script>
+<script>
+if (new URLSearchParams(location.search).has("embed")) document.body.classList.add("embed");
+let map, marker = null, shownSite = null, lastClick = null, failures = 0;
+
+function dms(v, hemi) {
+  let d = Math.floor(v), mf = (v - d) * 60, m = Math.floor(mf), s = (mf - m) * 60;
+  if (s >= 59.995) { s = 0; m += 1; }
+  if (m >= 60) { m = 0; d += 1; }
+  return `${d}° ${String(m).padStart(2, "0")}' ${s.toFixed(2).padStart(5, "0")}" ${hemi}`;
+}
+
+function setMsg(text, err) {
+  const el = document.getElementById("msg");
+  el.textContent = text;
+  el.className = err ? "err" : "";
+}
+
+function showSite(site) {
+  document.getElementById("dd").textContent = site ? `${site[0].toFixed(6)}°N, ${site[1].toFixed(6)}°E` : "-";
+  document.getElementById("dms").textContent = site ? `${dms(site[0], "N")},  ${dms(site[1], "E")}` : "-";
+  if (marker) { marker.remove(); marker = null; }
+  if (site) marker = L.circleMarker(site, { radius: 8, color: "#0a0e1a", weight: 2, fillColor: "#f87171", fillOpacity: 1 }).addTo(map);
+}
+
+async function pollState() {
+  try {
+    const st = await (await fetch("/api/state", { cache: "no-store" })).json();
+    failures = 0;
+    if (st.close) { window.close(); return; }
+    const key = st.site ? st.site.join(",") : "";
+    if (key !== shownSite) {
+      showSite(st.site);
+      if (st.site && key !== lastClick) map.setView(st.site, Math.max(map.getZoom(), 10), { animate: false });
+      shownSite = key;
+    }
+  } catch (e) {
+    failures += 1;
+    if (failures >= 5) window.close();
+    setMsg("프로그램과 연결이 끊겼습니다 — 프로그램이 켜져 있는지 확인하세요.", true);
+  }
+}
+
+async function onClick(e) {
+  const lat = +e.latlng.lat.toFixed(6), lon = +e.latlng.lng.toFixed(6);
+  lastClick = `${lat},${lon}`;
+  showSite([lat, lon]);
+  try {
+    const res = await fetch("/api/site", { method: "POST", headers: { "Content-Type": "application/json" },
+                                           body: JSON.stringify({ lat, lon }) });
+    setMsg(res.ok ? "프로그램에 반영했습니다." : "반영하지 못했습니다", !res.ok);
+  } catch (err) {
+    setMsg("프로그램에 보내지 못했습니다 — 프로그램이 켜져 있는지 확인하세요.", true);
+  }
+}
+
+map = L.map("map", { center: [35.9, 127.0], zoom: 7, worldCopyJump: true });
+const tiles = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  maxZoom: 18, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+}).addTo(map);
+tiles.on("tileerror", () => setMsg("지도 그림을 받지 못했습니다 — 인터넷 연결을 확인하세요 (좌표 입력은 그대로 됩니다).", true));
+map.on("click", onClick);
+setMsg("지도를 클릭해 설치위치를 정하세요.");
+pollState();
+setInterval(pollState, 1000);
+</script>
+</body>
+</html>
